@@ -36,6 +36,13 @@ RELEASE = 1
 MAKEFLAGS += -r --no-print-directory
 
 # Find out source, build and install directories
+
+ifndef TCDIR
+$(error TCDIR not set)
+else
+tc_src_dir=$(TCDIR)
+endif
+
 src_dir=$(CURDIR)
 ifdef O
  build_dir=$(shell readlink -f $(O))
@@ -109,6 +116,7 @@ export core_dir=$(CURDIR)/core
 export libs_dir=$(CURDIR)/libs
 export commands_dir=$(CURDIR)/commands
 export daemons_dir=$(CURDIR)/daemons
+export tcmod_dir=$(TCDIR)/tcmod
 export drivers_dir=$(CURDIR)/drivers
 export emulators_dir=$(CURDIR)/emulators
 
@@ -258,6 +266,7 @@ core-object-mks=$(shell if [ -d $(core_dir) ]; then find $(core_dir) -iname "obj
 libs-object-mks=$(shell if [ -d $(libs_dir) ]; then find $(libs_dir) -iname "objects.mk" | sort -r; fi)
 commands-object-mks=$(shell if [ -d $(commands_dir) ]; then find $(commands_dir) -iname "objects.mk" | sort -r; fi)
 daemons-object-mks=$(shell if [ -d $(daemons_dir) ]; then find $(daemons_dir) -iname "objects.mk" | sort -r; fi)
+tcmod-object-mks=$(shell if [ -d $(tcmod_dir) ]; then find $(tcmod_dir) -iname "objects.mk" | sort -r; fi)
 drivers-object-mks=$(shell if [ -d $(drivers_dir) ]; then find $(drivers_dir) -iname "objects.mk" | sort -r; fi)
 emulators-object-mks=$(shell if [ -d $(emulators_dir) ]; then find $(emulators_dir) -iname "objects.mk" | sort -r; fi)
 
@@ -276,6 +285,7 @@ include $(core-object-mks)
 include $(libs-object-mks)
 include $(commands-object-mks)
 include $(daemons-object-mks)
+include $(tcmod-object-mks)
 include $(drivers-object-mks)
 include $(emulators-object-mks)
 
@@ -289,6 +299,7 @@ core-y=$(foreach obj,$(core-objs-y),$(build_dir)/core/$(obj))
 libs-y=$(foreach obj,$(libs-objs-y),$(build_dir)/libs/$(obj))
 commands-y=$(foreach obj,$(commands-objs-y),$(build_dir)/commands/$(obj))
 daemons-y=$(foreach obj,$(daemons-objs-y),$(build_dir)/daemons/$(obj))
+tcmod-y=$(foreach obj,$(tcmod-objs-y),$(build_dir)/tcmod/$(obj))
 drivers-y=$(foreach obj,$(drivers-objs-y),$(build_dir)/drivers/$(obj))
 emulators-y=$(foreach obj,$(emulators-objs-y),$(build_dir)/emulators/$(obj))
 dtbs-y=$(foreach dtb,$(arch-dtbs-y),$(build_dir)/arch/$(CONFIG_ARCH)/dts/$(dtb))
@@ -298,6 +309,7 @@ core-m=$(foreach obj,$(core-objs-m),$(build_dir)/core/$(obj))
 libs-m=$(foreach obj,$(libs-objs-m),$(build_dir)/libs/$(obj))
 commands-m=$(foreach obj,$(commands-objs-m),$(build_dir)/commands/$(obj))
 daemons-m=$(foreach obj,$(daemons-objs-m),$(build_dir)/daemons/$(obj))
+tcmod-m=$(foreach obj,$(tcmod-objs-m),$(build_dir)/tcmod/$(obj))
 drivers-m=$(foreach obj,$(drivers-objs-m),$(build_dir)/drivers/$(obj))
 emulators-m=$(foreach obj,$(emulators-objs-m),$(build_dir)/emulators/$(obj))
 
@@ -311,6 +323,7 @@ deps-y+=$(core-y:.o=.dep)
 deps-y+=$(libs-y:.o=.dep)
 deps-y+=$(commands-y:.o=.dep)
 deps-y+=$(daemons-y:.o=.dep)
+deps-y+=$(tcmod-y:.o=.dep)
 deps-y+=$(drivers-y:.o=.dep)
 deps-y+=$(emulators-y:.o=.dep)
 deps-y+=$(dtbs-y:.dtb=.dep)
@@ -320,6 +333,7 @@ deps-y+=$(core-m:.o=.dep)
 deps-y+=$(libs-m:.o=.dep)
 deps-y+=$(commands-m:.o=.dep)
 deps-y+=$(daemons-m:.o=.dep)
+deps-y+=$(tcmod-m:.o=.dep)
 deps-y+=$(drivers-m:.o=.dep)
 deps-y+=$(emulators-m:.o=.dep)
 
@@ -335,6 +349,9 @@ endif
 ifneq ($(words $(daemons-y)), 0)
 all-y+=$(build_dir)/daemons/daemons.o
 endif
+ifneq ($(words $(tcmod-y)), 0)
+all-y+=$(build_dir)/tcmod/tcmod.o
+endif
 ifneq ($(words $(drivers-y)), 0)
 all-y+=$(build_dir)/drivers/drivers.o
 endif
@@ -347,21 +364,27 @@ all-m+=$(core-m:.o=.xo)
 all-m+=$(libs-m:.o=.xo)
 all-m+=$(commands-m:.o=.xo)
 all-m+=$(daemons-m:.o=.xo)
+all-m+=$(tcmod-m:.o=.xo)
 all-m+=$(drivers-m:.o=.xo)
 all-m+=$(emulators-m:.o=.xo)
 
 # Preserve all intermediate files
 .SECONDARY:
 
+#Trustcore. openconfig path correction to pick up the tcmod configurations
+#The TCDIR path is used in the openconfig file.
+openconfig-tcpath: openconf.cfg
+	sed -i "s@#TCDIR@${TCDIR}@g" openconf.cfg
+
 # Default rule "make"
 .PHONY: all
-all: $(CONFIG_FILE) $(tools-y) $(targets-y) $(dtbs-y)
+all: openconfig-tcpath $(CONFIG_FILE) $(tools-y) $(targets-y) $(dtbs-y)
 
 .PHONY: dtbs
 dtbs: $(CONFIG_FILE) $(dtbs-y)
 
 .PHONY: modules
-modules: $(CONFIG_FILE) $(all-m)
+modules: openconfig-tcpath $(CONFIG_FILE) $(all-m)
 
 .PHONY: install
 install: all
@@ -407,6 +430,9 @@ $(build_dir)/commands/commands.o: $(commands-y)
 $(build_dir)/daemons/daemons.o: $(daemons-y)
 	$(call merge_objs,$@,$^)
 
+$(build_dir)/tcmod/tcmod.o: $(tcmod-y)
+	$(call merge_objs,$@,$^)
+
 $(build_dir)/drivers/drivers.o: $(drivers-y)
 	$(call merge_objs,$@,$^)
 
@@ -419,6 +445,9 @@ $(build_dir)/%.dep: $(src_dir)/%.S
 $(build_dir)/%.dep: $(src_dir)/%.c
 	$(call compile_cc_dep,$@,$<)
 
+$(build_dir)/%.dep: $(tc_src_dir)/%.c
+	$(call compile_cc_dep,$@,$<)
+
 $(build_dir)/%.o: $(src_dir)/%.S
 	$(call compile_as,$@,$<)
 
@@ -426,6 +455,9 @@ $(build_dir)/%.o: $(build_dir)/%.S
 	$(call compile_as,$@,$<)
 
 $(build_dir)/%.o: $(src_dir)/%.c
+	$(call compile_cc,$@,$<)
+
+$(build_dir)/%.o: $(tc_src_dir)/%.c
 	$(call compile_cc,$@,$<)
 
 $(build_dir)/%.o: $(build_dir)/%.c
