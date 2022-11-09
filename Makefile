@@ -371,15 +371,20 @@ all-m+=$(emulators-m:.o=.xo)
 # Preserve all intermediate files
 .SECONDARY:
 
+#Trustcore. openconfig path correction to pick up the tcmod configurations
+#The TCDIR path is used in the openconfig file.
+.PHONY: openconfig-tcpath
+	sed -i "s@#TCDIR@$TCDIR@g" openconf.cfg
+
 # Default rule "make"
 .PHONY: all
-all: $(CONFIG_FILE) $(tools-y) $(targets-y) $(dtbs-y)
+all: openconfig-tcpath $(CONFIG_FILE) $(tools-y) $(targets-y) $(dtbs-y)
 
 .PHONY: dtbs
 dtbs: $(CONFIG_FILE) $(dtbs-y)
 
 .PHONY: modules
-modules: $(CONFIG_FILE) $(all-m)
+modules: openconfig-tcpath $(CONFIG_FILE) $(all-m)
 
 .PHONY: install
 install: all
