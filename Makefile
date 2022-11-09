@@ -373,8 +373,8 @@ all-m+=$(emulators-m:.o=.xo)
 
 #Trustcore. openconfig path correction to pick up the tcmod configurations
 #The TCDIR path is used in the openconfig file.
-.PHONY: openconfig-tcpath
-	sed -i "s@#TCDIR@$TCDIR@g" openconf.cfg
+openconfig-tcpath: openconf.cfg
+	sed -i "s@#TCDIR@${TCDIR}@g" openconf.cfg
 
 # Default rule "make"
 .PHONY: all
