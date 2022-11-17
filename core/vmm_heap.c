@@ -317,6 +317,19 @@ int vmm_normal_heap_print_state(struct vmm_chardev *cdev)
 	return heap_print_state(&normal_heap, cdev, "Normal");
 }
 
+void* vmm_normal_va2pa(virtual_addr_t va)
+{
+	int rc;
+	physical_addr_t pa = 0x0;
+
+	rc = heap_va2pa(&normal_heap, va, &pa);
+	if (rc != VMM_OK) {
+		BUG_ON(1);
+	}
+
+	return (void*)pa;
+}
+
 int __init vmm_heap_init(void)
 {
 	int rc;
