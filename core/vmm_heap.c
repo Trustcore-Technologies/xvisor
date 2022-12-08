@@ -330,6 +330,19 @@ void* vmm_normal_va2pa(virtual_addr_t va)
 	return (void*)pa;
 }
 
+void* vmm_normal_pa2va(physical_addr_t pa)
+{
+	int rc;
+	virtual_addr_t va = 0x0;
+
+	rc = heap_pa2va(&normal_heap, pa, &va);
+	if (rc != VMM_OK) {
+		BUG_ON(1);
+	}
+
+	return (void*)va;
+}
+
 int __init vmm_heap_init(void)
 {
 	int rc;
